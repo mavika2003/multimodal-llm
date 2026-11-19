@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "AIRLOCK Privacy Guardian",
+  "version": "0.1.0",
+  "description": "Local, consent-based pre-sharing privacy checks.",
+  "permissions": ["storage"],
+  "host_permissions": ["http://127.0.0.1:8765/*", "http://127.0.0.1:5174/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://127.0.0.1:5174/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "action": { "default_title": "AIRLOCK" }
+}

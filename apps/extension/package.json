@@ -1,0 +1,12 @@
+{
+  "name": "airlock-extension",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "esbuild src/background.ts --bundle --outfile=dist/background.js --format=esm && esbuild src/content.ts --bundle --outfile=dist/content.js --format=iife && cp manifest.json dist/ && cp -r public dist/ 2>/dev/null || true"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.3"
+  }
+}

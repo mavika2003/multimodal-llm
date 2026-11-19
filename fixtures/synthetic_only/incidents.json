@@ -1,0 +1,5 @@
+[
+  {"id": "AL-0001", "modality": "text", "severity": "medium"},
+  {"id": "AL-0002", "modality": "image", "severity": "high"},
+  {"id": "AL-0003", "modality": "text", "severity": "low"}
+]
