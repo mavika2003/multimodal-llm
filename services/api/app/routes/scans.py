@@ -27,7 +27,7 @@ def scans_text(req: TextScanRequest) -> ScanResponse:
 async def scans_image(
     action_id: str = Form(...),
     source: str = Form("local-demo-chat"),
-    destination_origin: str = Form("http://127.0.0.1:5174"),
+    destination_origin: str = Form("http://127.0.0.1:5173"),
     file: UploadFile = File(...),
 ) -> ScanResponse:
     data = await file.read()

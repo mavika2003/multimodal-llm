@@ -1,0 +1,5 @@
+[00:00:02] SPEAKER A: Remember Project Phoenix launches next quarter.
+[00:00:08] (keyboard typing sounds)
+[00:00:15] SPEAKER A: Do not share the client token in Slack.
+[00:00:20] (short notification chime)
+[00:00:25] SPEAKER B: Copy the sanitized screenshot only.

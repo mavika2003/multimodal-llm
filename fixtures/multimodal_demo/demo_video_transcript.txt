@@ -1,0 +1,7 @@
+Video demo script (synthetic screen recording, 10s).
+
+Frame at 1s: Terminal window titled "deploy" with text: export CLIENT_TOKEN=syn_demo_on_screen
+Frame at 3s: Browser tab with error message "authentication failed"
+Frame at 8s: Dashboard showing green status OK
+
+Question anchors: credential visible at 1s; error at 3s; no customer PII spoken.

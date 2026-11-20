@@ -1,0 +1,9 @@
+AIRLOCK Hackathon Demo Document (synthetic)
+
+Project Phoenix launches in Q2 2026. The internal codename is NIGHTSHIFT.
+Primary contact: demo.user@example.com (synthetic only).
+
+The public FAQ does not mention any embargo date for press releases.
+Employees must not paste API keys into external chat tools.
+
+EOF

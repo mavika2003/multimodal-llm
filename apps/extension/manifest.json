@@ -1,20 +1,35 @@
 {
   "manifest_version": 3,
   "name": "AIRLOCK Privacy Guardian",
-  "version": "0.1.0",
-  "description": "Local, consent-based pre-sharing privacy checks.",
-  "permissions": ["storage"],
-  "host_permissions": ["http://127.0.0.1:8765/*", "http://127.0.0.1:5174/*"],
+  "version": "0.3.1",
+  "description": "Local proactive privacy guard: scans compose fields before content leaves supported pages.",
+  "permissions": ["storage", "contextMenus", "activeTab", "scripting"],
+  "optional_host_permissions": ["<all_urls>"],
+  "host_permissions": [
+    "http://127.0.0.1:8765/*",
+    "http://127.0.0.1:5173/*",
+    "http://127.0.0.1:5174/*",
+    "http://127.0.0.1:5175/*",
+    "http://127.0.0.1:5176/*"
+  ],
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
   "content_scripts": [
     {
-      "matches": ["http://127.0.0.1:5174/*"],
+      "matches": [
+        "http://127.0.0.1:5173/*",
+        "http://127.0.0.1:5174/*",
+        "http://127.0.0.1:5175/*",
+        "http://127.0.0.1:5176/*"
+      ],
       "js": ["content.js"],
-      "run_at": "document_start"
+      "run_at": "document_idle"
     }
   ],
-  "action": { "default_title": "AIRLOCK" }
+  "action": {
+    "default_title": "AIRLOCK",
+    "default_popup": "popup.html"
+  }
 }

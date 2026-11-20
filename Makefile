@@ -1,4 +1,4 @@
-.PHONY: api dashboard demo-chat nightshift extension test dev
+.PHONY: api dashboard demo-chat nightshift extension extension-build test dev setup-all setup-api setup-frontends agent agent-watch
 
 api:
 	cd services/api && . .venv/bin/activate && uvicorn app.main:app --host 127.0.0.1 --port 8765 --reload
@@ -26,3 +26,19 @@ setup-frontends:
 	cd apps/demo-chat && npm install
 	cd apps/nightshift && npm install
 	cd apps/extension && npm install
+
+setup-all: setup-api setup-frontends
+
+demo-fixtures:
+	cd services/api && . .venv/bin/activate && python ../../scripts/generate_demo_fixtures.py
+
+agent:
+	cd services/api && . .venv/bin/activate && python ../agent/airlock_desktop_agent.py
+
+agent-debug:
+	cd services/api && . .venv/bin/activate && AIRLOCK_AGENT_DEBUG=1 python ../agent/airlock_desktop_agent.py
+
+agent-watch:
+	@echo "Watching $$HOME/Downloads (set AIRLOCK_WATCH_DIR to override)"
+	cd services/api && . .venv/bin/activate && \
+		AIRLOCK_WATCH_DIR=$${AIRLOCK_WATCH_DIR:-$$HOME/Downloads} python ../agent/airlock_desktop_agent.py

@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     airlock_local_token: str = "dev-local-token"
     airlock_db_path: str = "./data/airlock.db"
     airlock_allowed_origins: str = (
-        "http://127.0.0.1:5173,http://127.0.0.1:5174,chrome-extension://"
+        "http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175,http://127.0.0.1:5176,chrome-extension://"
     )
     ollama_host: str = "http://127.0.0.1:11434"
     ollama_vlm_model: str = ""

@@ -40,7 +40,7 @@ class Finding(BaseModel):
 class TextScanRequest(BaseModel):
     action_id: str
     source: str = "local-demo-chat"
-    destination_origin: str = "http://127.0.0.1:5174"
+    destination_origin: str = "http://127.0.0.1:5173"
     modality: Literal["text", "code"] = "text"
     content: str
     payload_sha256: str | None = None
@@ -110,12 +110,24 @@ class InspectorAskRequest(BaseModel):
     question: str
     content_text: str | None = None
     context_hint: str | None = None
+    image_base64: str | None = None
 
 
 class InspectorAskResponse(BaseModel):
     answer: str
     citations: list[str] = Field(default_factory=list)
     abstained: bool = False
+    sound_events: list[str] = Field(default_factory=list)
+    model_used: str | None = None
+
+
+class InspectorIngestResponse(BaseModel):
+    modality: str
+    filename: str
+    extracted_preview: str
+    char_count: int
+    findings: list[Finding] = Field(default_factory=list)
+    notes: str | None = None
 
 
 class HealthResponse(BaseModel):

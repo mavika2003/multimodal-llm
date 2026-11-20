@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ImagePlus, Send, ShieldAlert } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
+  redactImage,
   redactText,
   scanImage,
   scanText,
@@ -89,6 +90,26 @@ export function DemoChatPage() {
 
   async function createSafeCopy() {
     if (!modal) return;
+    try {
+    if (file) {
+      const blob = await redactImage(lastActionId, file, modal);
+      const sanitizedFile = new File([blob], file.name.replace(/\.\w+$/, "") + "-safe.png", {
+        type: "image/png",
+      });
+      const verified = await scanImage(lastActionId, sanitizedFile);
+      if (verified.decision === "allow" || verified.decision === "warn") {
+        await submitPayload({
+          text: text || "[sanitized image]",
+          imageName: sanitizedFile.name,
+        });
+        setFile(sanitizedFile);
+        setModal(null);
+        setStatus("Sanitized image sent");
+      } else {
+        setStatus("Sanitized image still flagged");
+      }
+      return;
+    }
     const sanitized = await redactText(lastActionId, text, modal);
     const verified = await verifyText(lastActionId, sanitized);
     if (verified.decision === "allow" || verified.decision === "warn") {
@@ -98,6 +119,10 @@ export function DemoChatPage() {
       setStatus("Sanitized copy sent");
     } else {
       setStatus("Sanitized copy still flagged");
+    }
+    } catch (e) {
+      setStatus("Redaction failed");
+      console.error(e);
     }
   }
 
@@ -127,6 +152,7 @@ export function DemoChatPage() {
           <label className="field">
             <span className="field-label">Message</span>
             <textarea
+              id="airlock-compose"
               className="input"
               rows={8}
               value={text}
@@ -149,6 +175,7 @@ export function DemoChatPage() {
           <button
             type="button"
             className="btn btn-primary"
+            data-airlock-guarded-send
             disabled={pending || (!text && !file)}
             onClick={guardedSend}
           >

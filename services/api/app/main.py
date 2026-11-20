@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import health, incidents, inspector, scans
+from app.routes import demo, health, incidents, inspector, scans
 from app.settings import settings
 
 app = FastAPI(title="AIRLOCK API", version="0.1.0")
@@ -20,6 +20,7 @@ api.include_router(health.router)
 api.include_router(scans.router)
 api.include_router(incidents.router)
 api.include_router(inspector.router)
+api.include_router(demo.router)
 
 app.mount("/api/v1", api)
 

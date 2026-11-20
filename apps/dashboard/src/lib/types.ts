@@ -4,6 +4,8 @@ export type InspectorResult = {
   answer: string;
   citations: string[];
   abstained: boolean;
+  sound_events?: string[];
+  model_used?: string | null;
 };
 
 export type AnalyticsSummary = {

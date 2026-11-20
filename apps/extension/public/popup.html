@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AIRLOCK</title>
+    <style>
+      body {
+        font: 13px system-ui, sans-serif;
+        margin: 12px;
+        min-width: 300px;
+        color: #e8eaed;
+        background: #0f1419;
+      }
+      h1 {
+        font-size: 14px;
+        margin: 0 0 4px;
+      }
+      .sub {
+        font-size: 11px;
+        color: #9aa4b2;
+        margin: 0 0 12px;
+      }
+      label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 8px 0;
+        font-size: 12px;
+      }
+      button {
+        width: 100%;
+        padding: 8px 10px;
+        margin-top: 8px;
+        border-radius: 6px;
+        border: 1px solid #2a3441;
+        background: #1a2332;
+        color: #e8eaed;
+        cursor: pointer;
+      }
+      button.primary {
+        background: #0d3d2e;
+        border-color: #1f6b50;
+      }
+      button.danger {
+        background: #450a0a;
+        border-color: #7f1d1d;
+      }
+      #status {
+        margin-top: 10px;
+        font-size: 12px;
+        color: #9aa4b2;
+      }
+      #decision {
+        margin-top: 6px;
+        font-weight: 600;
+      }
+      pre {
+        font-size: 11px;
+        max-height: 100px;
+        overflow: auto;
+        background: #15191f;
+        padding: 8px;
+        border-radius: 6px;
+      }
+      hr {
+        border: none;
+        border-top: 1px solid #2a3441;
+        margin: 12px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>AIRLOCK (local)</h1>
+    <p class="sub">Opt-in proactive guard. Scans stay on your machine via :8765.</p>
+    <label><input type="checkbox" id="proactive" /> Proactive guard (all sites)</label>
+    <label><input type="checkbox" id="blockOnSend" checked /> Pause send on block / review</label>
+    <label><input type="checkbox" id="scanOnPaste" checked /> Scan on paste</label>
+    <label><input type="checkbox" id="liveDebounce" checked /> Live scan while typing</label>
+    <button type="button" class="primary" id="save-settings">Save guard settings</button>
+    <hr />
+    <p id="status">Checking API…</p>
+    <button type="button" class="primary" id="scan-compose">Scan active field</button>
+    <button type="button" id="scan-selection">Scan page selection</button>
+    <p id="decision"></p>
+    <pre id="detail"></pre>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

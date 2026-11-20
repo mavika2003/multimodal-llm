@@ -80,3 +80,42 @@ export async function verifyText(actionId: string, content: string): Promise<Sca
   });
   return r.json();
 }
+
+async function fileToBase64(file: File): Promise<string> {
+  const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 1) {
+    binary += String.fromCharCode(bytes[i]!);
+  }
+  return btoa(binary);
+}
+
+export async function redactImage(
+  actionId: string,
+  file: File,
+  scan: ScanDecision,
+): Promise<Blob> {
+  const image_base64 = await fileToBase64(file);
+  const r = await fetch(`${API}/redactions`, {
+    method: "POST",
+    headers: await headers(),
+    body: JSON.stringify({
+      action_id: actionId,
+      modality: "image",
+      image_base64,
+      finding_ids: scan.findings.map((f) => f.id),
+      findings: scan.findings,
+    }),
+  });
+  if (!r.ok) throw new Error(await r.text());
+  const data = await r.json();
+  const dataUrl = data.sanitized_image_base64 as string;
+  const b64 = dataUrl.split(",")[1] ?? "";
+  const raw = atob(b64);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i += 1) {
+    out[i] = raw.charCodeAt(i);
+  }
+  return new Blob([out], { type: "image/png" });
+}
