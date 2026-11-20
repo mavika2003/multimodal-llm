@@ -25,6 +25,11 @@ SECRET_PATTERNS: list[tuple[str, str, re.Pattern[str]]] = [
         re.compile(r"AKIA[0-9A-Z]{16}"),
     ),
     (
+        "aws_key",
+        "high",
+        re.compile(r"(?i)AWS_(?:ACCESS_KEY_ID|SECRET_ACCESS_KEY)\s*=\s*\S+"),
+    ),
+    (
         "github_token",
         "high",
         re.compile(r"ghp_[A-Za-z0-9]{20,}"),
@@ -34,9 +39,41 @@ SECRET_PATTERNS: list[tuple[str, str, re.Pattern[str]]] = [
         "medium",
         re.compile(r"(?i)bearer\s+[A-Za-z0-9_\-.]{12,}"),
     ),
+    (
+        "database_url",
+        "high",
+        re.compile(
+            r"(?i)(postgresql|postgres|mysql|mongodb)(\+[^:]+)?://[^\s'\"]+",
+        ),
+    ),
+    (
+        "jwt_token",
+        "high",
+        re.compile(r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"),
+    ),
+    (
+        "sk_live_key",
+        "critical",
+        re.compile(r"sk_live_[A-Za-z0-9]{12,}"),
+    ),
 ]
 
 EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
+PHONE_RE = re.compile(r"\+\d{1,3}[-.\s]?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{4}")
+PASSWORD_ASSIGN_RE = re.compile(
+    r"(?i)(password|passwd|pwd)\s*[=:]\s*['\"]?([^\s'\"#]{6,})",
+)
+SPOKEN_PASSWORD_RE = re.compile(
+    r"(?i)(wifi\s+)?(password|passcode|passphrase|bypass\s+word).{0,36}"
+    r"(?:is|was|it's|are|'s)\s+([^\n.!?]{4,48})",
+)
+SPOKEN_EMAIL_RE = re.compile(
+    r"(?i)\b([a-z0-9._%+-]{1,64})\s+at\s+([a-z0-9.-]+\.[a-z]{2,})\b",
+)
+SPOKEN_IT_IS_RE = re.compile(r"(?i)\bit\s+is\s+([^\n.!?]{4,48})")
+CREDENTIAL_DIALOGUE_CTX = re.compile(
+    r"(?i)(bypass\s+word|wifi\s+password|guest\s+wifi|what\s+is\s+the\s+.*password)",
+)
 
 
 def _entropy(s: str) -> float:
@@ -140,5 +177,58 @@ def scan_text_secrets(text: str, detector_prefix: str = "deterministic_rules") -
             "email",
             "Email address detected; may be PII depending on context.",
         )
+
+    for m in PHONE_RE.finditer(text):
+        add(
+            "phone",
+            "medium",
+            m.start(),
+            m.end(),
+            "phone",
+            "Phone number detected; may be PII.",
+        )
+
+    for m in PASSWORD_ASSIGN_RE.finditer(text):
+        add(
+            "hardcoded_password",
+            "high",
+            m.start(2),
+            m.end(2),
+            "password",
+            "Hardcoded password assignment detected.",
+        )
+
+    for m in SPOKEN_PASSWORD_RE.finditer(text):
+        start, end = m.span(3)
+        add(
+            "spoken_password",
+            "high",
+            start,
+            end,
+            "password",
+            "Spoken password or passphrase detected in transcript.",
+        )
+
+    for m in SPOKEN_EMAIL_RE.finditer(text):
+        add(
+            "email",
+            "medium",
+            m.start(),
+            m.end(),
+            "email",
+            "Spoken email address detected (at-sign may be missing in ASR).",
+        )
+
+    if CREDENTIAL_DIALOGUE_CTX.search(text):
+        for m in SPOKEN_IT_IS_RE.finditer(text):
+            start, end = m.span(1)
+            add(
+                "spoken_password",
+                "high",
+                start,
+                end,
+                "password",
+                "Spoken password shared in conversational audio.",
+            )
 
     return findings

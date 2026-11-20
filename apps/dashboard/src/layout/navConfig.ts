@@ -25,7 +25,7 @@ export const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = 
   },
   "/chat": {
     title: "Demo Chat",
-    subtitle: "Controlled mock chat with pre-submit AIRLOCK scanning",
+    subtitle: "Multimodal pre-send scan: text, code, image, document, audio, video",
   },
   "/live": {
     title: "Live Monitor",

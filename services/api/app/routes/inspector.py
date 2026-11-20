@@ -6,14 +6,9 @@ from pydantic import BaseModel
 
 from app.auth import verify_bearer, verify_origin
 from app.db import repository
-from app.detectors.ingest import (
-    analyze_extracted_text,
-    extract_audio_text,
-    extract_document_text,
-    extract_image_text,
-    extract_video_text,
-)
-from app.llm.audio_events import infer_sound_events
+from app.detectors.analyze import analyze_extracted_text
+from app.detectors.ingest import extract_audio_text, extract_image_text, extract_video_text
+from app.detectors.pdf_pipeline import extract_document_text
 from app.llm.multimodal import answer_audio, answer_grounded_text, answer_image, answer_video
 from app.models import InspectorAskRequest, InspectorAskResponse, InspectorIngestResponse
 from app.settings import settings
@@ -83,7 +78,9 @@ async def inspector_ask(req: InspectorAskRequest) -> InspectorAskResponse:
                         citations=[f"page_{page_num}"],
                         model_used="document_span",
                     )
-        return await answer_grounded_text(req.question, body, "document", settings.ollama_coder_model)
+        from app.llm.ollama_runtime import resolve_text_model
+
+        return await answer_grounded_text(req.question, body, "document", resolve_text_model())
 
     if req.modality == "image":
         return await answer_image(req.question, body, req.image_base64, models)
@@ -95,7 +92,9 @@ async def inspector_ask(req: InspectorAskRequest) -> InspectorAskResponse:
         return await answer_video(req.question, body)
 
     if req.modality in ("text", "document") and body:
-        return await answer_grounded_text(req.question, body, req.modality, settings.ollama_coder_model)
+        from app.llm.ollama_runtime import resolve_text_model
+
+        return await answer_grounded_text(req.question, body, req.modality, resolve_text_model())
 
     return InspectorAskResponse(
         answer="No content provided for this modality.",
@@ -116,22 +115,28 @@ async def inspector_ingest(
     notes: str | None = None
     findings = []
 
+    sound_events: list[str] = []
+    models_used: list[str] = []
+    segments: list[dict[str, float | str]] = []
+    text = ""
+
     if mod in ("document", "text", "code"):
         text = extract_document_text(data, filename)
         findings = analyze_extracted_text(text)
     elif mod == "image":
         text, findings = extract_image_text(data)
     elif mod == "audio":
-        text = extract_audio_text(data, filename)
+        text, sound_events, asr_model, asr_err = extract_audio_text(data, filename)
         findings = analyze_extracted_text(text)
-        sounds = infer_sound_events(text)
-        notes = f"Sound events (rule-based): {', '.join(sounds) or 'none'}"
-        if text.startswith("["):
-            notes += " — upload .txt transcript or use ffmpeg+whisper for raw audio"
+        if asr_model:
+            models_used.append(asr_model)
+        notes = f"Sound events: {', '.join(sound_events) or 'none'}"
+        if asr_err:
+            notes += f" — ASR: {asr_err}"
     elif mod == "video":
-        text = extract_video_text(data, filename)
+        text, sound_events, models_used = extract_video_text(data, filename)
         findings = analyze_extracted_text(text)
-        notes = "Video uses multi-frame OCR (ffmpeg) + optional Ollama Q&A"
+        notes = "Video: ffmpeg frames + OCR + VLM + audio ASR when present"
     else:
         text = extract_document_text(data, filename)
         findings = analyze_extracted_text(text)
@@ -144,6 +149,9 @@ async def inspector_ingest(
         char_count=len(text),
         findings=findings,
         notes=notes,
+        sound_events=sound_events,
+        models_used=models_used,
+        transcript_segments=segments,
     )
 
 
@@ -157,7 +165,11 @@ async def code_task(req: CodeTaskRequest) -> dict:
 
 @router.post("/inspector/code-task/{task_id}/run")
 def run_code_task(task_id: str, body: RunCodeBody) -> dict:
+    from app.llm.code_extract import extract_python_code
     from app.llm.sandbox import run_fixture_script
 
     _ = task_id
-    return run_fixture_script(body.code)
+    code, err = extract_python_code(body.code)
+    if not code:
+        return {"ok": False, "error": err or "invalid_code", "stdout": ""}
+    return run_fixture_script(code)

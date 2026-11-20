@@ -1,11 +1,15 @@
 import base64
+import logging
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from app.auth import verify_bearer, verify_origin
+
+logger = logging.getLogger("airlock.scan")
 from app.detectors.secrets import scan_text_secrets
 from app.engine.orchestrator import scan_image_b64, scan_text
+from app.engine.upload_scan import infer_upload_modality, scan_uploaded_file
 from app.engine.policy import decide_from_findings
 from app.models import RedactRequest, RedactResponse, ScanResponse, TextScanRequest
 from app.redaction.image import redact_image_bytes
@@ -17,8 +21,6 @@ router = APIRouter(dependencies=[Depends(verify_bearer), Depends(verify_origin)]
 @router.post("/scans/text", response_model=ScanResponse)
 def scans_text(req: TextScanRequest) -> ScanResponse:
     if len(req.content.encode()) > 512_000:
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=413, detail="FILE_TOO_LARGE")
     return scan_text(req)
 
@@ -32,16 +34,47 @@ async def scans_image(
 ) -> ScanResponse:
     data = await file.read()
     if len(data) > 25_000_000:
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=413, detail="FILE_TOO_LARGE")
     b64 = base64.b64encode(data).decode()
     return scan_image_b64(action_id, b64, source, destination_origin)
 
 
+@router.post("/scans/file", response_model=ScanResponse)
+async def scans_file(
+    action_id: str = Form(...),
+    source: str = Form("local-demo-chat"),
+    destination_origin: str = Form("http://127.0.0.1:5173"),
+    modality: str | None = Form(None),
+    file: UploadFile = File(...),
+) -> ScanResponse:
+    data = await file.read()
+    if len(data) > 25_000_000:
+        raise HTTPException(status_code=413, detail="FILE_TOO_LARGE")
+    name = file.filename or "upload.bin"
+    mod = modality or infer_upload_modality(name)
+    try:
+        return scan_uploaded_file(action_id, data, name, source, destination_origin, mod)
+    except Exception as exc:
+        logger.exception(
+            "scan_file_failed action_id=%s file=%s modality=%s",
+            action_id,
+            name,
+            mod,
+        )
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error_code": "SCAN_PROCESSING_FAILED",
+                "message": f"{exc.__class__.__name__}: {exc}",
+                "modality": mod,
+            },
+        ) from exc
+
+
 @router.post("/redactions", response_model=RedactResponse)
 def redactions(req: RedactRequest) -> RedactResponse:
-    if req.modality in ("text", "code") and req.content_text is not None:
+    text_modalities = ("text", "code", "document", "audio", "video")
+    if req.modality in text_modalities and req.content_text is not None:
         sanitized = redact_text(req.content_text, req.findings, req.finding_ids)
         return RedactResponse(sanitized_text=sanitized, finding_ids=req.finding_ids)
     if req.modality == "image" and req.image_base64:
@@ -52,8 +85,6 @@ def redactions(req: RedactRequest) -> RedactResponse:
             sanitized_image_base64=f"data:image/png;base64,{b64}",
             finding_ids=req.finding_ids,
         )
-    from fastapi import HTTPException
-
     raise HTTPException(status_code=400, detail="INVALID_PAYLOAD")
 
 

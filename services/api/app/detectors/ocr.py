@@ -2,7 +2,7 @@ import io
 import uuid
 from dataclasses import dataclass
 
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageOps
 
 from app.detectors.secrets import scan_text_secrets
 from app.models import Finding, SourceAnchor
@@ -26,11 +26,27 @@ class OcrToken:
     conf: float
 
 
-def _run_tesseract(image: Image.Image) -> list[OcrToken]:
+def _ocr_variants(image: Image.Image) -> list[Image.Image]:
+    """Terminal / screenshot video frames often need upscale and contrast passes."""
+    variants: list[Image.Image] = [image]
+    w, h = image.size
+    if w < 1600:
+        big = image.resize((w * 2, h * 2), Image.Resampling.LANCZOS)
+        variants.append(big)
+    gray = image.convert("L")
+    mean_luma = sum(gray.getdata()) / max(1, w * h)
+    if mean_luma < 120:
+        variants.append(ImageEnhance.Contrast(gray).enhance(2.4).convert("RGB"))
+        variants.append(ImageOps.autocontrast(gray).convert("RGB"))
+    return variants
+
+
+def _run_tesseract(image: Image.Image, *, psm: str = "6") -> list[OcrToken]:
     if not TESSERACT_AVAILABLE:
         return []
     try:
-        data = pytesseract.image_to_data(image, output_type=Output.DICT)
+        cfg = f"--psm {psm} --oem 3"
+        data = pytesseract.image_to_data(image, output_type=Output.DICT, config=cfg)
     except Exception:
         return []
     tokens: list[OcrToken] = []
@@ -57,8 +73,22 @@ def _run_tesseract(image: Image.Image) -> list[OcrToken]:
 
 def scan_image_bytes(data: bytes) -> tuple[str, list[Finding]]:
     image = Image.open(io.BytesIO(data)).convert("RGB")
-    tokens = _run_tesseract(image)
-    full_text = " ".join(t.text for t in tokens)
+    best_tokens: list[OcrToken] = []
+    best_text = ""
+    for variant in _ocr_variants(image):
+        tokens = _run_tesseract(variant)
+        text = " ".join(t.text for t in tokens)
+        if len(text) > len(best_text):
+            best_text = text
+            best_tokens = tokens
+        if not best_text.strip():
+            tokens = _run_tesseract(variant, psm="11")
+            text = " ".join(t.text for t in tokens)
+            if len(text) > len(best_text):
+                best_text = text
+                best_tokens = tokens
+    tokens = best_tokens
+    full_text = best_text
     findings = scan_text_secrets(full_text, detector_prefix="ocr_plus_rules")
 
     for f in findings:

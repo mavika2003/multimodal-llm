@@ -277,6 +277,14 @@ export function InspectorPage() {
               </ul>
             ) : null}
             {ingest?.notes ? <p className="muted small">{ingest.notes}</p> : null}
+            {ingest?.sound_events && ingest.sound_events.length > 0 ? (
+              <p className="muted small mono">
+                Sound events: {ingest.sound_events.join(", ")}
+              </p>
+            ) : null}
+            {ingest?.models_used && ingest.models_used.length > 0 ? (
+              <p className="muted small mono">Models: {ingest.models_used.join(", ")}</p>
+            ) : null}
 
             <label className="field">
               <span className="field-label">Question</span>

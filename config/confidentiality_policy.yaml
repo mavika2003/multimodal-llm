@@ -1,0 +1,23 @@
+# Local confidentiality policy for contextual classification (synthetic demo)
+indicators:
+  - pattern: "(?i)confidential"
+    category: confidential_marker
+    severity: medium
+  - pattern: "(?i)board-approved"
+    category: confidential_business
+    severity: high
+  - pattern: "(?i)private acquisition"
+    category: confidential_business
+    severity: high
+  - pattern: "(?i)target valuation"
+    category: confidential_financial
+    severity: high
+  - pattern: "(?i)project\\s+nightjar"
+    category: confidential_project
+    severity: high
+  - pattern: "(?i)do not share"
+    category: sharing_restriction
+    severity: medium
+codenames:
+  - NIGHTJAR
+  - PHOENIX

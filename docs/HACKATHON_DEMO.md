@@ -27,7 +27,7 @@
 | # | Time | What judges see |
 |---|------|-----------------|
 | 1 | 2 min | **Chrome:** Claude/ChatGPT paste secret → extension pause (`require_review`) |
-| 2 | 2 min | **Dashboard /chat:** safe copy + receiver log empty until sanitized |
+| 2 | 3 min | **Dashboard /chat:** multimodal send scan (PDF, image, audio transcript, video, code file) + safe copy |
 | 3 | 8 min | **Inspector → IEEE hackathon kit:** run all five buttons (document, image, audio, video, code) |
 | 4 | 2 min | **Incidents + Inspector Q:** “What did AIRLOCK stop me sharing today?” |
 | 5 | 1 min | **Architecture slide:** Ollama models, Tesseract, SQLite, limits |

@@ -33,12 +33,14 @@ DEMO_MANIFEST = [
         "modality": "audio",
         "file": "demo_audio_transcript.txt",
         "sample_question": "Was keyboard typing present?",
+        "raw_audio_file": "demo_speech.wav",
     },
     {
         "id": "video",
         "modality": "video",
-        "file": "demo_video_transcript.txt",
-        "sample_question": "At what timestamp is a client token visible?",
+        "file": "demo_video.mp4",
+        "sample_question": "At what sampled timestamp is a credential visible?",
+        "fallback_file": "demo_video_transcript.txt",
     },
 ]
 

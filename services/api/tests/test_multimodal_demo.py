@@ -16,10 +16,11 @@ def test_audio_sound_events():
     assert "keyboard_typing" in events
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
-async def test_document_abstains_embargo():
+async def test_document_abstains_missing_fact():
     res = await answer_grounded_text(
-        "What is the embargo date?",
+        "What is the board-approved acquisition valuation for Q3 2029?",
         DOC,
         "document",
     )

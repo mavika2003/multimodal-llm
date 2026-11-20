@@ -1,0 +1,17 @@
+file,type,question,expected_answer,sensitive_items,when,sounds_present
+audio/a01_card_number.wav,audio,What card number is mentioned?,4111 1111 1111 1111 (test card),credit card number,,speech (1 speaker)
+audio/a02_aws_key.wav,audio,Is any credential spoken? What is it?,Yes: AWS access key AKIAIOSFODNN7EXAMPLE (Amazon's documentation example),AWS access key,,speech (1 speaker)
+audio/a03_ssn_phone.wav,audio,What personal information is mentioned?,SSN 987-65-4321 (advertising-reserved) and phone 555-0142,SSN; phone number,,speech (1 speaker)
+audio/a04_email.wav,audio,Who should receive the statement?,jordan.reyes@example.com,email address,,speech (1 speaker)
+audio/a05_clean_meeting.wav,audio,Is there any sensitive information?,No. (Answer: when is the sprint review? Thursday),none (clean control),,speech (1 speaker)
+audio/a06_card_with_notification_beeps.wav,audio,What sounds are present besides speech?,Two-tone notification beeps (near start and end) plus speech; card 4242 4242 4242 4242,credit card number,beeps at ~0.1s and near end,speech; notification beeps
+audio/a07_password_with_background_noise.wav,audio,Transcribe it. Is a secret mentioned?,Yes: database password 'blue falcon 42',password,,speech; constant background noise (fan-like rumble + 60 Hz hum)
+audio/a08_token_with_keyboard_clicks.wav,audio,What sounds are present besides speech?,Keyboard-like clicking throughout (synthetic clicks); spoken token 'syn demo 8f3k',access token,,speech; keyboard-like clicks (synthetic)
+audio/a09_two_speakers_password.wav,audio,"How many speakers are there, and what secret is shared?","Two speakers (female question, male answer); wifi password 'orange river 77'; email admin@example.com",password; email address,,speech (2 speakers)
+audio/a10_clean_with_beep.wav,audio,Is there any sensitive information? What sounds are present?,No sensitive info. Speech plus one beep at the end,none (clean control),beep near end,speech; single beep
+video/v01_terminal_aws_key.mp4,video,"At what time does a credential appear, and what is it?",AWS access key AKIAIOSFODNN7EXAMPLE appears at 4s; AWS secret key at 5s; both cleared at 7s,AWS access key; AWS secret key,4s-7s,
+video/v02_email_card_number.mp4,video,"What personal or payment info is visible, and when?",Name Jordan Reyes + email jordan.reyes@example.com from ~2s; card 4111 1111 1111 1111 from ~3s; phone 555-0142 from ~4s,name; email; credit card; phone,2s-end,
+video/v03_editor_env_secrets.mp4,video,Which secrets scroll past in the editor?,DB_PASSWORD=BlueFalcon42! (visible 0s to ~6.6s) and STRIPE_KEY=sk_test_FAKE0000demo0000 (visible 0s to ~7.9s); also noreply@example.com,password; API key; email,0s-~7.9s (editor scrolls down),
+video/v04_clean_dashboard.mp4,video,Describe the clip. Is anything sensitive shown?,A service status dashboard with 4 metric cards and an animated bar chart. Nothing sensitive.,none (clean control),,
+video/v05_tiny_corner_token.mp4,video,Is any credential visible? Where and when?,"Yes, small grey text bottom-right: client_token=syn_8f3k29s00, visible 2s-8s (hard OCR case)",access token,2s-8s,
+video/v06_terminal_with_narration.mp4,video,Describe the clip and transcribe the narration. Is anything sensitive said or shown?,"Terminal shows a deploy completing (build, push, migrations, health check). Narration mentions phone 555-0199. Nothing sensitive on screen.",phone number (spoken only),audio throughout,

@@ -1,127 +1,104 @@
-import io
 import shutil
 import subprocess
 import tempfile
 from pathlib import Path
 
+from app.audio.acoustic_events import classify_acoustic_events, labels_from_events
+from app.detectors.analyze import analyze_extracted_text
 from app.detectors.ocr import scan_image_bytes
-from app.detectors.secrets import scan_text_secrets
-
-try:
-    from pypdf import PdfReader
-
-    PDF_AVAILABLE = True
-except ImportError:
-    PDF_AVAILABLE = False
-
-
-def extract_document_text(data: bytes, filename: str) -> str:
-    lower = filename.lower()
-    if lower.endswith((".txt", ".md", ".json", ".csv", ".log", ".srt", ".vtt")):
-        return data.decode("utf-8", errors="replace")
-    if lower.endswith(".pdf"):
-        if not PDF_AVAILABLE:
-            return "[PDF support requires pypdf on the API server]"
-        reader = PdfReader(io.BytesIO(data))
-        parts: list[str] = []
-        for i, page in enumerate(reader.pages[:50], start=1):
-            page_text = (page.extract_text() or "").strip()
-            if page_text:
-                parts.append(f"--- page {i} ---\n{page_text}")
-        return "\n\n".join(parts).strip() or "[PDF contained no extractable text]"
-    return data.decode("utf-8", errors="replace")
-
+from app.detectors.pdf_pipeline import extract_document_text
+from app.detectors.video_pipeline import extract_video_enhanced
+from app.llm.audio_events import infer_sound_events
+from app.llm.whisper_local import transcribe_audio_file
 
 def extract_image_text(data: bytes) -> tuple[str, list]:
     text, findings = scan_image_bytes(data)
     return text, findings
 
 
-def extract_audio_text(data: bytes, filename: str) -> str:
+def extract_audio_text(data: bytes, filename: str) -> tuple[str, list[str], str | None, str | None]:
+    """Returns text, sound_event_labels, model_used, error."""
     lower = filename.lower()
     if lower.endswith((".txt", ".srt", ".vtt", ".md")):
-        return data.decode("utf-8", errors="replace")
-    if shutil.which("ffmpeg"):
-        with tempfile.TemporaryDirectory() as td:
-            src = Path(td) / "in"
-            wav = Path(td) / "out.wav"
-            src.write_bytes(data)
-            try:
-                subprocess.run(
-                    ["ffmpeg", "-y", "-i", str(src), "-ar", "16000", "-ac", "1", str(wav)],
-                    check=True,
-                    capture_output=True,
-                    timeout=120,
-                )
-            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-                return (
-                    f"[Could not decode audio {filename}. Upload a .txt transcript for offline demo.]"
-                )
-            if shutil.which("whisper"):
-                try:
-                    out = subprocess.run(
-                        ["whisper", str(wav), "--model", "tiny", "--language", "en", "--output_format", "txt", "--output_dir", td],
-                        capture_output=True,
-                        text=True,
-                        timeout=300,
-                    )
-                    if out.returncode == 0:
-                        txt_files = list(Path(td).glob("*.txt"))
-                        if txt_files:
-                            return txt_files[0].read_text(encoding="utf-8", errors="replace")
-                except (subprocess.TimeoutExpired, FileNotFoundError):
-                    pass
-    return (
-        f"[Audio {filename}: no local transcript extracted. "
-        "For demo, attach a .txt transcript or install whisper CLI with ffmpeg.]"
-    )
+        text = data.decode("utf-8", errors="replace")
+        sounds = infer_sound_events(text) + labels_from_events([])
+        return text, sounds, "transcript_file", None
+
+    if not shutil.which("ffmpeg"):
+        return (
+            f"[Audio {filename}: ffmpeg required for raw audio]",
+            [],
+            None,
+            "ffmpeg_missing",
+        )
+
+    with tempfile.TemporaryDirectory() as td:
+        td_path = Path(td)
+        src = td_path / "in"
+        wav = td_path / "norm.wav"
+        src.write_bytes(data)
+        try:
+            subprocess.run(
+                [
+                    "ffmpeg",
+                    "-y",
+                    "-i",
+                    str(src),
+                    "-ar",
+                    "16000",
+                    "-ac",
+                    "1",
+                    str(wav),
+                ],
+                check=True,
+                capture_output=True,
+                timeout=120,
+            )
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+            return (
+                f"[Could not decode audio {filename}]",
+                [],
+                None,
+                str(e),
+            )
+
+        acoustic = classify_acoustic_events(str(wav))
+        acoustic_labels = labels_from_events(acoustic)
+        tr = transcribe_audio_file(wav)
+        if tr.error and not tr.transcript:
+            return (
+                f"[Transcription failed: {tr.error}]",
+                acoustic_labels,
+                tr.model_used,
+                tr.error,
+            )
+        text = tr.transcript
+        if tr.segments:
+            lines = [f"[{s.start:.1f}-{s.end:.1f}] {s.text}" for s in tr.segments]
+            text = "\n".join(lines)
+        rule_sounds = infer_sound_events(text)
+        merged = list(dict.fromkeys(acoustic_labels + rule_sounds))
+        return text, merged, tr.model_used, tr.error
 
 
-def extract_video_text(data: bytes, filename: str) -> str:
-    if shutil.which("ffmpeg"):
-        with tempfile.TemporaryDirectory() as td:
-            src = Path(td) / "in"
-            src.write_bytes(data)
-            offsets = [1, 3, 8]
-            chunks: list[str] = []
-            total_findings = 0
-            for sec in offsets:
-                frame = Path(td) / f"frame_{sec}.jpg"
-                try:
-                    subprocess.run(
-                        [
-                            "ffmpeg",
-                            "-y",
-                            "-i",
-                            str(src),
-                            "-ss",
-                            str(sec),
-                            "-vframes",
-                            "1",
-                            str(frame),
-                        ],
-                        check=True,
-                        capture_output=True,
-                        timeout=120,
-                    )
-                except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-                    continue
-                if not frame.exists():
-                    continue
-                img_data = frame.read_bytes()
-                ocr_text, findings = scan_image_bytes(img_data)
-                total_findings += len(findings)
-                chunks.append(f"[t={sec}s] {ocr_text.strip() or '(no ocr text)'}")
-            if chunks:
-                note = f"Multi-frame OCR from {filename}:\n" + "\n".join(chunks)
-                if total_findings:
-                    note += f"\n(findings: {total_findings} rule hit(s) across frames)"
-                return note
-    return (
-        f"[Video {filename}: frame OCR unavailable without ffmpeg. "
-        "Upload a short clip or paste a description in Inspector Q&A.]"
-    )
+def extract_video_text(
+    data: bytes,
+    filename: str,
+    *,
+    profile: str = "inspector",
+) -> tuple[str, list[str], list[str]]:
+    from app.detectors.video_pipeline import extract_video_enhanced
+
+    res = extract_video_enhanced(data, filename, profile=profile)  # type: ignore[arg-type]
+    return res.text, res.sound_events, res.models_used
 
 
-def analyze_extracted_text(text: str, detector_prefix: str = "ingest_rules") -> list:
-    return scan_text_secrets(text, detector_prefix=detector_prefix)
+def extract_video_text_firewall(
+    data: bytes,
+    filename: str,
+    diag=None,
+) -> tuple[str, list[str], list[str], list]:
+    from app.detectors.video_pipeline import extract_video_enhanced
+
+    res = extract_video_enhanced(data, filename, profile="firewall", diag=diag)
+    return res.text, res.sound_events, res.models_used, res.frame_findings or []

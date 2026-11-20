@@ -84,6 +84,8 @@ export async function fetchDemoFixtureText(filename: string): Promise<string> {
 }
 
 export type IngestResult = {
+  sound_events?: string[];
+  models_used?: string[];
   modality: string;
   filename: string;
   extracted_preview: string;
@@ -95,6 +97,8 @@ export type IngestResult = {
     excerpt_redacted: string;
   }>;
   notes?: string | null;
+  sound_events?: string[];
+  models_used?: string[];
 };
 
 export async function inspectorIngest(modality: string, file: File): Promise<IngestResult> {

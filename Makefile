@@ -30,7 +30,10 @@ setup-frontends:
 setup-all: setup-api setup-frontends
 
 demo-fixtures:
-	cd services/api && . .venv/bin/activate && python ../../scripts/generate_demo_fixtures.py
+	cd services/api && . .venv/bin/activate && python ../../scripts/generate_multimodal_fixtures.py
+
+prefetch-whisper:
+	cd services/api && . .venv/bin/activate && python ../../scripts/prefetch_whisper.py
 
 agent:
 	cd services/api && . .venv/bin/activate && python ../agent/airlock_desktop_agent.py

@@ -55,11 +55,17 @@ class ScanResponse(BaseModel):
     transmission_status: Literal[
         "not_sent_confirmed", "sent_confirmed", "unknown"
     ] = "not_sent_confirmed"
+    modality: str | None = None
+    filename: str | None = None
+    extracted_text: str | None = None
+    scan_error_code: str | None = None
+    scan_request_id: str | None = None
+    stages_ms: dict[str, float] | None = None
 
 
 class RedactRequest(BaseModel):
     action_id: str
-    modality: Literal["text", "code", "image"]
+    modality: Literal["text", "code", "image", "document", "audio", "video"]
     content_text: str | None = None
     finding_ids: list[str]
     findings: list[Finding]
@@ -128,6 +134,9 @@ class InspectorIngestResponse(BaseModel):
     char_count: int
     findings: list[Finding] = Field(default_factory=list)
     notes: str | None = None
+    sound_events: list[str] = Field(default_factory=list)
+    models_used: list[str] = Field(default_factory=list)
+    transcript_segments: list[dict[str, float | str]] = Field(default_factory=list)
 
 
 class HealthResponse(BaseModel):

@@ -10,7 +10,7 @@ def decide_from_findings(findings: list[Finding], scan_failed: bool = False) -> 
     categories = {f.category for f in findings}
 
     if "critical" in severities or categories.intersection(
-        {"private_key_block", "aws_key", "github_token"}
+        {"private_key_block", "aws_key", "github_token", "spoken_password", "hardcoded_password"}
     ):
         return Decision.block
 
